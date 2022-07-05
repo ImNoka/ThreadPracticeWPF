@@ -15,14 +15,14 @@ using ThreadPracticeWPF.ViewModel;
 namespace ThreadPracticeWPF.View
 {
     /// <summary>
-    /// Логика взаимодействия для ChildWindow.xaml
+    /// Логика взаимодействия для CurrencyWindow.xaml
     /// </summary>
-    public partial class ChildWindow : Window
+    public partial class CurrencyWindow : Window
     {
-        public ChildWindow()
+        public CurrencyWindow()
         {
             InitializeComponent();
-            DataContext=new ChildWindowViewModel();
+            DataContext=new CurrencyWindowViewModel();
         }
     }
 }

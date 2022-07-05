@@ -58,7 +58,7 @@
             <TextBox Text="{Binding Time}"  PreviewTextInput="NumberValidationTextBox" ToolTip="Time delay"/>
             <TextBlock Text="{Binding LastNumber}" ToolTip="Last value"/>
         </StackPanel>
-        <Button Grid.Column="3" Grid.Row="1" Command="{Binding NewChildWindow}"/>
+        <Button Content="Currency" Grid.Column="3" Grid.Row="1" Command="{Binding NewChildWindow}"/>
  
     </Grid>
 </Window>

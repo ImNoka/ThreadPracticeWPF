@@ -139,9 +139,8 @@ namespace ThreadPracticeWPF.ViewModel
                 return newChildWindow ??
                     (new RelayCommand((newChild) =>
                     {
-                        ChildWindow childWindow = new ChildWindow();
-                        if (childWindow.ShowDialog() == true)
-                            return;
+                        CurrencyWindow childWindow = new CurrencyWindow();
+                        childWindow.Show();
                     }));
             }
         }
@@ -212,8 +211,6 @@ namespace ThreadPracticeWPF.ViewModel
 
 
         }
-
-
 
         public void RunCounter2Test(object? items)
         {

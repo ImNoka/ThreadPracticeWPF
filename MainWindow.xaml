@@ -48,15 +48,17 @@
             </ListView.View>
         </ListView>
         <StackPanel Grid.Column="0" Grid.Row="1" Orientation="Horizontal">
-            <Button Content="Run Counter 1" Command="{Binding CounterCommand}"
+            <Button Content="Run Counters" Command="{Binding RunCounters}"
                     CommandParameter="{Binding Counter1}"/>
-            <Button Content="Run Counter 2" Command="{Binding CounterCommand}"
+            <Button Content="Stop Counters" Command="{Binding StopCounters}"
                     CommandParameter="{Binding Counter2}"/>
-            <Button Content="Synhronize"/>
-            <Button Content="Unsynhtonize"/>
         </StackPanel>
         <CheckBox Content="Synhronized" Grid.Column="1" Grid.Row="1" IsChecked="{Binding IsSynhronized}"/>
-        
-
+        <StackPanel Grid.Column="2" Grid.Row="2">
+            <TextBox Text="{Binding Time}"  PreviewTextInput="NumberValidationTextBox" ToolTip="Time delay"/>
+            <TextBlock Text="{Binding LastNumber}" ToolTip="Last value"/>
+        </StackPanel>
+        <Button Grid.Column="3" Grid.Row="1" Command="{Binding NewChildWindow}"/>
+ 
     </Grid>
 </Window>

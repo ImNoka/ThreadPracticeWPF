@@ -5,19 +5,45 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using ThreadPracticeWPF.Model;
 using ThreadPracticeWPF.Service;
+using ThreadPracticeWPF.View;
 
 namespace ThreadPracticeWPF.ViewModel
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-
+        int x;
         int time = 2000;
+        public int Time
+        {
+            get { return time; }
+            set
+            {
+                time = value;
+                OnPropertyChanged();
+            }
+        }
+
 
         private bool isSynhronized = true;
+        public bool IsRunning = true;
+
+        int lastNumber = 0;
+        public int LastNumber
+        {
+            get { return lastNumber; }
+            set
+            {
+                lastNumber = value;
+                OnPropertyChanged();
+            }
+        }
+
         public bool IsSynhronized
         {
             get { return isSynhronized; }
@@ -29,6 +55,8 @@ namespace ThreadPracticeWPF.ViewModel
         }
 
         AutoResetEvent waitHandler = new AutoResetEvent(true);
+        ManualResetEvent resetEvent = new ManualResetEvent(false);
+
         public Thread Counter1 { get; set; }
         public Thread Counter2 { get; set; }
 
@@ -37,8 +65,8 @@ namespace ThreadPracticeWPF.ViewModel
         public ObservableCollection<CounterItem> CounterItems
         {
             get { return counterItems; }
-            set { counterItems = value; 
-                    OnPropertyChanged(); }
+            set { counterItems = value;
+                OnPropertyChanged(); }
         }
 
         private ObservableCollection<CounterItem> counterItems1;
@@ -66,52 +94,73 @@ namespace ThreadPracticeWPF.ViewModel
         }
 
 
-        private RelayCommand counterCommand;
+        private RelayCommand runCounters;
+        private RelayCommand stopCounters;
 
-        public RelayCommand CounterCommand
+        public RelayCommand RunCounters
         {
             get
             {
-                return counterCommand ??
-                    (counterCommand = new RelayCommand((counter) =>
+                return runCounters ??
+                    (runCounters = new RelayCommand((counter) =>
                     {
-                        Thread ctr = counter as Thread;
-                        /*if (ctr.ThreadState == ThreadState.Unstarted)
+                        IsRunning = true;
+                        if (Counter1.ThreadState == ThreadState.WaitSleepJoin && Counter2.ThreadState == ThreadState.WaitSleepJoin)
                         {
-                            switch (ctr.Name)
-                            {
-                                case ("Counter1"):
-                                    ctr.Start(CounterItems1);
-                                    break;
-                                case ("Counter2"):
-                                    ctr.Start(CounterItems2);
-                                    break;
-                                default:
-                                    return;
-                            }
-                        }*/
+                            resetEvent.Set();
+                            return;
+                        }
+
                         Counter1.Start(CounterItems1);
                         Counter2.Start(CounterItems2);
+                    }));
+            }
+        }
+        public RelayCommand StopCounters
+        {
+            get
+            {
+                return stopCounters ??
+                    (stopCounters = new RelayCommand((counter) =>
+                    {
+                        IsRunning = false;
+                        resetEvent.Reset();
                     }));
             }
         }
 
 
 
+        RelayCommand newChildWindow;
+        public RelayCommand NewChildWindow
+        {
+            get
+            {
+                return newChildWindow ??
+                    (new RelayCommand((newChild) =>
+                    {
+                        ChildWindow childWindow = new ChildWindow();
+                        if (childWindow.ShowDialog() == true)
+                            return;
+                    }));
+            }
+        }
+
+
         public MainViewModel()
         {
             CounterItems1 = new ObservableCollection<CounterItem>();
             CounterItems2 = new ObservableCollection<CounterItem>();
-            CounterItems = new ObservableCollection<CounterItem>() { new CounterItem() { Value=0} };
-            Counter1 = new Thread(new ParameterizedThreadStart(RunCounter1));
+            CounterItems = new ObservableCollection<CounterItem>() { new CounterItem() { Value = 0 } };
+            Counter1 = new Thread(new ParameterizedThreadStart(RunCounter1Test));
             Counter1.Name = "Counter1";
-            Counter2 = new Thread(new ParameterizedThreadStart(RunCounter2));
+            Counter2 = new Thread(new ParameterizedThreadStart(RunCounter2Test));
             Counter2.Name = "Counter2";
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public void OnPropertyChanged([CallerMemberName]string prop = "")
+        public void OnPropertyChanged([CallerMemberName] string prop = "")
         {
             if (PropertyChanged != null)
             {
@@ -119,28 +168,21 @@ namespace ThreadPracticeWPF.ViewModel
             }
         }
 
-        public void RunCounter1(object? items)
+        public void RunCounter1Test(object? items)
         {
             ObservableCollection<CounterItem> counterItems = items as ObservableCollection<CounterItem>;
             if (counterItems == null)
                 return;
-            while(CounterItems.Count < 1000)
+            while (CounterItems.Count < 1000)
             {
-                if(isSynhronized)
-                    try
-                    {
-                        waitHandler.WaitOne();
-                    }
-                    catch (ObjectDisposedException ex)
-                    {
-                        waitHandler = new AutoResetEvent(false);
-                        waitHandler.WaitOne();
-                    }
-                /*if (CounterItems.Count==0)
-                    App.Current.Dispatcher.Invoke((Action)delegate {
-                    CounterItems.Add(new CounterItem() { Value = 0 });
-                });*/
-                //for (int i = 0; i < 3; i++)
+                
+                if (!IsRunning)
+                    resetEvent.WaitOne();
+                if (IsSynhronized)
+                    waitHandler.WaitOne();
+                else
+                    waitHandler.Set();
+
                 App.Current.Dispatcher.Invoke((Action)delegate
                 {
                     var counterItem = new CounterItem()
@@ -150,49 +192,45 @@ namespace ThreadPracticeWPF.ViewModel
                     };
                     counterItems.Add(counterItem);
                     CounterItems.Add(counterItem);
-                    
+                    LastNumber = counterItem.Value;
+
                 });
-                Thread.Sleep(time);
+
                 if (isSynhronized)
-                    try
-                    {
-                        waitHandler.Set();
-                    }
-                    catch (ObjectDisposedException ex) { }
+                {
+                    Thread.Sleep(Time);
+                    waitHandler.Set();
+                }
                 else
                 {
-                    try
-                    {
-                        waitHandler.Set();
-                    }
-                    catch (ObjectDisposedException ex) { }
-                    waitHandler.Dispose();
+                    Thread.Sleep(Time);
+                    continue;
                 }
+                
+
             }
+
+
         }
-        public void RunCounter2(object? items)
+
+
+
+        public void RunCounter2Test(object? items)
         {
             ObservableCollection<CounterItem> counterItems = items as ObservableCollection<CounterItem>;
             if (counterItems == null)
                 return;
-            while (CounterItems.Count<1000)
+            while (CounterItems.Count < 1000)
             {
-                if (isSynhronized)
-                    try
-                    {
-                        waitHandler.WaitOne();
-                    }
-                    catch (ObjectDisposedException ex) 
-                    {
-                        waitHandler = new AutoResetEvent(false);
-                        waitHandler.WaitOne();
-                    }
+                
+                if (!IsRunning)
+                    resetEvent.WaitOne();
+                if (IsSynhronized)
+                    waitHandler.WaitOne();
+                else
+                    waitHandler.Set();
+                
 
-                /*if (CounterItems.Count==0)
-                    App.Current.Dispatcher.Invoke((Action)delegate {
-                    CounterItems.Add(new CounterItem() { Value = 0 });
-                });*/
-                //for(int i = 0; i<3;i++)
                 App.Current.Dispatcher.Invoke((Action)delegate
                 {
                     var counterItem = new CounterItem()
@@ -202,28 +240,25 @@ namespace ThreadPracticeWPF.ViewModel
                     };
                     counterItems.Add(counterItem);
                     CounterItems.Add(counterItem);
-                    
-                });
-                Thread.Sleep(time / 2);
+                    LastNumber = counterItem.Value;
 
-                if (isSynhronized)
-                    try
-                    {
-                        waitHandler.Set();
-                    }
-                    catch (ObjectDisposedException ex) { }
+                });
+
+                if (IsSynhronized)
+                {
+                    Thread.Sleep(Time / 3);
+                    waitHandler.Set();
+                }
                 else
                 {
-                    try
-                    {
-                        waitHandler.Set();
-                    }
-                    catch(ObjectDisposedException ex) { }
-                    waitHandler.Dispose();
+                    Thread.Sleep(Time / 3);
+                    continue;
                 }
-                    
-
+                
             }
+
+
         }
     }
+
 }
